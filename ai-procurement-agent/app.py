@@ -1,8 +1,8 @@
 import streamlit as st
-from openai import OpenAI
+import openai
 
-# Unsichtbar verwendeter OpenAI-Key (nicht empfohlen für Produktion!)
-openai_api_key = ["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"]
+# OpenAI API Key aus Streamlit Secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Streamlit UI
 st.set_page_config(page_title="AI Procurement Negotiator 💼", layout="centered")
@@ -13,10 +13,7 @@ st.write(
     "while maintaining quality and partnership standards."
 )
 
-# Create OpenAI client
-client = OpenAI(api_key=openai_api_key)
-
-# Initialize session state
+# Session-State initialisieren
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "system", "content":
@@ -27,31 +24,36 @@ if "messages" not in st.session_state:
         }
     ]
 
-# Display past messages
+# Vergangene Nachrichten anzeigen
 for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-# Chat input field
+# Chat-Eingabe
 if prompt := st.chat_input("Start negotiating with the supplier..."):
 
-    # Append user message
+    # Nachricht des Users speichern und anzeigen
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # OpenAI API response
-    stream = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.messages
-        ],
-        stream=True,
-    )
-
-    # Display and store assistant reply
+    # Anfrage an OpenAI senden
     with st.chat_message("assistant"):
-        response = st.write_stream(stream)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=st.session_state.messages,
+            stream=True,
+        )
+
+        # Antwort streamen
+        full_response = ""
+        for chunk in response:
+            if "choices" in chunk:
+                delta = chunk["choices"][0]["delta"]
+                if "content" in delta:
+                    full_response += delta["content"]
+                    st.markdown(delta["content"], unsafe_allow_html=True)
+
+    # Antwort speichern
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
