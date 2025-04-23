@@ -2,7 +2,8 @@ import streamlit as st
 import openai
 
 # OpenAI API Key aus Streamlit Secrets
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+openai.api_key = "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"
+
 
 # Streamlit UI
 st.set_page_config(page_title="AI Procurement Negotiator 💼", layout="centered")
